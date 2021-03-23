@@ -1,0 +1,15 @@
+.aws/**
+.azure/**
+.cache/**
+.docker/**
+.fastlane/**
+.local/**
+.ssh/**
+.vscode-server/**
+tmp/**
+
+.bash_history
+.profile
+.viminfo
+.wget-hsts
+.gitconfig
