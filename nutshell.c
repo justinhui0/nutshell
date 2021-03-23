@@ -2,6 +2,8 @@
 #include <string.h>
 #include "parser.tab.h"
 #include "global.c"
+
+// test
 enum CMD { BYE, ERRORS, OK };
 
 enum CMD getCommand() {
