@@ -4,9 +4,10 @@
 #include <string.h>
 #include "global.c"
 int yylex();
+int counter =0;
 void addins(char* inst) {
     struct inst i = {inst};
-    arr[0] = i;
+    arr[counter] = i;
 }
 
 void yyerror(char* e) {
@@ -26,6 +27,9 @@ void yyerror(char* e) {
 
 %%
 
-
+command:
+    %empty 
+    | IDENTIFIER
+    
 idn:
-    IDENTIFIER {  $$ = $1; addins($$); } ;
+    IDENTIFIER {  addins($1); counter = counter+1;} ;

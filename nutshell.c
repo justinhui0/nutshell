@@ -1,37 +1,43 @@
 #include <stdio.h>
 #include <string.h>
-#include "parser.tab.h"
+#include <unistd.h>
 #include "global.c"
-
-// test
+#include "parser.tab.h"
 enum CMD { BYE, ERRORS, OK };
 
 enum CMD getCommand() {
     // init scanner and parser here    
 
-    if (yyparse()) { // parsing error
+    if (yyparse()) { // parsing error               
         return ERRORS;
     } else {
         return OK;
     }
 }
-/*void doit(char* cmd) {
+void doit() {
+    execlp("ls","ls",NULL);
 
 }
-void process_command(char* cmd) {
-    if(builtin) {
-        doit(cmd);
+
+void process_command() {
+    
+    if(strcmp(*arr[0].name, "ls") == 0) {
+        doit();
     }    
-    else {
-        execute();
-    }
-}*/
+
+}
 
 int main() {
+    char HOME[256];
+
+    if (getcwd(HOME, sizeof(HOME)) == NULL) {
+        // error
+    } 
+
     enum CMD type;
     while (1) {
 
-       // printf("%s", "Hello, world: ");
+       printf("%s> ", HOME);
         
         switch (type = getCommand()) {
             case BYE: {
@@ -39,10 +45,17 @@ int main() {
                 return 0;
             }
             case OK: {
-                //process_command;
-                printf("%sBRUH\n", *arr[0].name);
+                process_command();
+                //break;
+                // printf("%s\n", *arr[counter].name);
+            }
+            case ERRORS: {
+                //printf("%s\n", "something went wrong");
+                // return 0;
             }
         }
-    }
+    }                     // printf("%s\n", "something went wrong");
+          
     return 0;
+
 }

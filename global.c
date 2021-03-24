@@ -3,4 +3,3 @@ struct inst {
 };
 
 struct inst arr[100];
-

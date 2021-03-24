@@ -73,16 +73,17 @@
 #include <string.h>
 #include "global.c"
 int yylex();
+int counter =0;
 void addins(char* inst) {
     struct inst i = {inst};
-    arr[0] = i;
+    arr[counter] = i;
 }
 
 void yyerror(char* e) {
     printf("Error: %s\n", e);
 }
 
-#line 86 "parser.tab.c"
+#line 87 "parser.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -139,11 +140,11 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 17 "parser.y"
+#line 18 "parser.y"
 
     char* string;
 
-#line 147 "parser.tab.c"
+#line 148 "parser.tab.c"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -1303,12 +1304,12 @@ yyreduce:
     {
   case 2:
 #line 31 "parser.y"
-               {  (yyval.string) = (yyvsp[0].string); addins((yyval.string)); }
-#line 1308 "parser.tab.c"
+               {  addins((yyvsp[0].string)); counter = counter+1;}
+#line 1309 "parser.tab.c"
     break;
 
 
-#line 1312 "parser.tab.c"
+#line 1313 "parser.tab.c"
 
       default: break;
     }

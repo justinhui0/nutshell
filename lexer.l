@@ -11,7 +11,7 @@ NOTQUOTE [^"]
 
 
 
-[ \t\r]+ { /* whitespace - do nothing */  }
-[\n]+  return -1;
+[ \t\r]+ { };
+[\n] return -1;
 {char}+ { yylval.string = strdup(yytext); return IDENTIFIER;};
 {DIGIT}+   return NUMBER;
