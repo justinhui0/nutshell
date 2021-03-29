@@ -71,9 +71,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "global.c"
+#include "global.h"
 int yylex();
-int counter =0;
 void addins(char* inst) {
     struct inst i = {inst};
     arr[counter] = i;
@@ -83,7 +82,7 @@ void yyerror(char* e) {
     printf("Error: %s\n", e);
 }
 
-#line 87 "parser.tab.c"
+#line 86 "parser.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -140,11 +139,11 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 18 "parser.y"
+#line 17 "parser.y"
 
     char* string;
 
-#line 148 "parser.tab.c"
+#line 147 "parser.tab.c"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -461,18 +460,18 @@ union yyalloc
 #endif /* !YYCOPY_NEEDED */
 
 /* YYFINAL -- State number of the termination state.  */
-#define YYFINAL  3
+#define YYFINAL  2
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   1
+#define YYLAST   3
 
 /* YYNTOKENS -- Number of terminals.  */
 #define YYNTOKENS  5
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  2
+#define YYNNTS  3
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  2
+#define YYNRULES  4
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  4
+#define YYNSTATES  5
 
 #define YYUNDEFTOK  2
 #define YYMAXUTOK   259
@@ -519,7 +518,7 @@ static const yytype_int8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int8 yyrline[] =
 {
-       0,    31,    31
+       0,    30,    30,    31,    35
 };
 #endif
 
@@ -528,7 +527,8 @@ static const yytype_int8 yyrline[] =
    First, the terminals, then, starting at YYNTOKENS, nonterminals.  */
 static const char *const yytname[] =
 {
-  "$end", "error", "$undefined", "IDENTIFIER", "NUMBER", "$accept", "idn", YY_NULLPTR
+  "$end", "error", "$undefined", "IDENTIFIER", "NUMBER", "$accept", "idn",
+  "input", YY_NULLPTR
 };
 #endif
 
@@ -541,7 +541,7 @@ static const yytype_int16 yytoknum[] =
 };
 # endif
 
-#define YYPACT_NINF (-4)
+#define YYPACT_NINF (-1)
 
 #define yypact_value_is_default(Yyn) \
   ((Yyn) == YYPACT_NINF)
@@ -555,7 +555,7 @@ static const yytype_int16 yytoknum[] =
      STATE-NUM.  */
 static const yytype_int8 yypact[] =
 {
-      -3,    -4,     1,    -4
+      -1,     0,    -1,    -1,    -1
 };
 
   /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -563,19 +563,19 @@ static const yytype_int8 yypact[] =
      means the default is an error.  */
 static const yytype_int8 yydefact[] =
 {
-       0,     2,     0,     1
+       2,     0,     1,     4,     3
 };
 
   /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-      -4,    -4
+      -1,    -1,    -1
 };
 
   /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-      -1,     2
+      -1,     4,     1
 };
 
   /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -583,31 +583,31 @@ static const yytype_int8 yydefgoto[] =
      number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_int8 yytable[] =
 {
-       1,     3
+       2,     0,     0,     3
 };
 
 static const yytype_int8 yycheck[] =
 {
-       3,     0
+       0,    -1,    -1,     3
 };
 
   /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
      symbol of state STATE-NUM.  */
 static const yytype_int8 yystos[] =
 {
-       0,     3,     6,     0
+       0,     7,     0,     3,     6
 };
 
   /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
 static const yytype_int8 yyr1[] =
 {
-       0,     5,     6
+       0,     5,     7,     7,     6
 };
 
   /* YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.  */
 static const yytype_int8 yyr2[] =
 {
-       0,     2,     1
+       0,     2,     0,     2,     1
 };
 
 
@@ -1302,14 +1302,20 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
-  case 2:
+  case 3:
 #line 31 "parser.y"
-               {  addins((yyvsp[0].string)); counter = counter+1;}
+                { }
 #line 1309 "parser.tab.c"
     break;
 
+  case 4:
+#line 35 "parser.y"
+               {addins((yyvsp[0].string)); counter = counter+1;}
+#line 1315 "parser.tab.c"
+    break;
 
-#line 1313 "parser.tab.c"
+
+#line 1319 "parser.tab.c"
 
       default: break;
     }

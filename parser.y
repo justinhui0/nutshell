@@ -2,9 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "global.c"
+#include "global.h"
 int yylex();
-int counter =0;
 void addins(char* inst) {
     struct inst i = {inst};
     arr[counter] = i;
@@ -21,15 +20,16 @@ void yyerror(char* e) {
 
 %token <string> IDENTIFIER 
 %token NUMBER
-%type <string> idn
+%nterm <string> idn
 //%nterm <statement_list_t*>  value_list
 
 
 %%
 
-command:
-    %empty 
-    | IDENTIFIER
+input:
+    %empty
+    | input idn { };
+
     
 idn:
-    IDENTIFIER {  addins($1); counter = counter+1;} ;
+    IDENTIFIER {addins($1); counter = counter+1;};
