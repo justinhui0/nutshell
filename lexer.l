@@ -4,7 +4,7 @@
 
 
 DIGIT [0-9]
-char [A-Za-z.]
+char [A-Za-z.*/]
 QUOTE ["]
 NOTQUOTE [^"]
 %%
