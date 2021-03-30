@@ -5,9 +5,11 @@
 #include <sys/wait.h>
 #include <dirent.h>
 #include <errno.h>
+#include <assert.h>
 
 #include "global.h"
 #include "parser.tab.h"
+
 enum CMD { BYE, ERRORS, OK };
 struct alias {
     char* alias;
@@ -19,6 +21,55 @@ struct alias aliasarr[100];
 char HOME[256];
 
 extern char **environ;
+
+// source: https://stackoverflow.com/questions/9210528/split-string-with-delimiters-in-c
+char** str_split(char* a_str, const char a_delim)
+{
+    char** result    = 0;
+    size_t count     = 0;
+    char* tmp        = a_str;
+    char* last_comma = 0;
+    char delim[2];
+    delim[0] = a_delim;
+    delim[1] = 0;
+
+    /* Count how many elements will be extracted. */
+    while (*tmp)
+    {
+        if (a_delim == *tmp)
+        {
+            count++;
+            last_comma = tmp;
+        }
+        tmp++;
+    }
+
+    /* Add space for trailing token. */
+    count += last_comma < (a_str + strlen(a_str) - 1);
+
+    /* Add space for terminating null string so caller
+       knows where the list of returned strings ends. */
+    count++;
+
+    result = malloc(sizeof(char*) * count);
+
+    if (result)
+    {
+        size_t idx  = 0;
+        char* token = strtok(a_str, delim);
+
+        while (token)
+        {
+            assert(idx < count);
+            *(result + idx++) = strdup(token);
+            token = strtok(0, delim);
+        }
+        assert(idx == count - 1);
+        *(result + idx) = 0;
+    }
+
+    return result;
+}
 
 void initialize() {
     // initialize alias array
@@ -47,7 +98,7 @@ void initialize() {
     }
 
     // initialize PATH
-    if (setenv("PATH", "/bin", 1) == -1)
+    if (setenv("PATH", ".:/bin", 1) == -1)
     {
         printf("PATH not initialized\n");
     }
@@ -70,46 +121,33 @@ void doit() {
     int retStatus;
     if (child_pid = fork() == 0)
     {
-
-        /*
-        char args[1000];
-        char *const argPtr = args;
-        //const char args[1000] = "";
-        for (int i = 0; i < 100; i++)
-        {
-            // value is not empty
-            if (strcmp(*arr[i].name, "")) {
-                strcat(args, *arr[i].name);
-                strcat(args, " ");
-            } else {
-                break;
-            }
-        }
-        strcat(args, "\0");
-        */
         char *PATH = getenv("PATH");
+        // parse path and split on : delimiters
+        char** pathArr = str_split(PATH, ':');
+
         char *args[counter + 1];
 
-        // first arg = PATH + /executable
-        size_t len = strlen(*arr[0].name) + strlen("/") + strlen(PATH);
-        /* allocate memory for the new string */
-        char* str = malloc(len + 1);
+        for (int i = 0; *(pathArr + i); i++) {
+            // first arg = PATH + /executable
+            size_t len = strlen(*arr[0].name) + strlen("/") + strlen(*(pathArr + i));
+            /* allocate memory for the new string */
+            char* str = malloc(len + 1);
 
-        /* concatenate *///.:/bin
-        strcpy(str, PATH);
-        strcat(str, "/");
-        strcat(str, *arr[0].name); 
+            strcpy(str, *(pathArr + i));
+            strcat(str, "/");
+            strcat(str, *arr[0].name); 
 
-        args[0] = str;
+            args[0] = str;
 
-        for (int i = 1; i < counter; i++)
-        {
-            args[i] = *arr[i].name;
+            for (int i = 1; i < counter; i++)
+            {
+                args[i] = *arr[i].name;
+            }
+
+            args[counter] = NULL;
+
+            execv(args[0],args);
         }
-
-        args[counter] = NULL;
-
-        execv(args[0],args);
         exit(0);
     }
     else if (child_pid == -1)
