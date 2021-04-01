@@ -34,4 +34,3 @@ input:
 idn:
     IDENTIFIER "||" IDENTIFIER {addins($1); counter = counter+1;addins("||"); counter = counter+1;addins($3); counter = counter+1;}
     | IDENTIFIER {addins($1); counter = counter+1;};
-    | IDENTIFIER "\"" IDENTIFIER "\"" {addins($1); counter = counter+1;addins($3); counter = counter+1; }

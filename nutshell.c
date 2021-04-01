@@ -10,7 +10,7 @@
 #include "global.h"
 #include "parser.tab.h"
 
-enum CMD { BYE, ERRORS, OK };
+enum CMD { ERRORS, OK };
 struct alias {
     char* alias;
     char* original;
@@ -164,6 +164,19 @@ void process_command() {
             foundAlias = aliasarr[i].original;
         }
     }
+
+    // last val is &, run command in background... fork?
+    if (!strcmp(*arr[counter - 1].name, "&")) {
+        pid_t child_pid;
+        counter--;
+        if (child_pid = fork() < 0) {
+            perror("fork");
+            return;
+        } else if (child_pid > 0) { // parent process
+            return;
+        }
+    }
+  
     if(!strcmp(*arr[0].name, "setenv")||!strcmp(foundAlias, "setenv")) {
         if (strcmp(*arr[2].name, "") != 0) { 
             if(setenv(*arr[1].name,*arr[2].name, 1) == -1) {
@@ -191,20 +204,31 @@ void process_command() {
     }
     else if (!strcmp(*arr[0].name, "alias")) {
         if(!strcmp(*arr[1].name , "")) {
-            printf("All aliases and their assignments \n");
             for(int i = 0; i < aliasindex; i++) {
-                printf("%s %s\n", aliasarr[i].alias, aliasarr[i].original);
+                printf("alias %s=\'%s\'\n", aliasarr[i].alias, aliasarr[i].original);
             }
+        } else {
+            struct alias al = {*arr[1].name, *arr[2].name};
+            aliasarr[aliasindex] = al;
+            aliasindex = aliasindex+1;
         }
-        struct alias al = {*arr[1].name, *arr[2].name};
-        aliasarr[aliasindex] = al;
-        aliasindex = aliasindex+1;
     }
     else if (!strcmp(*arr[0].name, "unalias")) {
-        for(int i = 0; i < aliasindex; i++) {
+        int i = 0;
+        int found = 0;
+        for(i; i < aliasindex; i++) {
             if(!strcmp(*arr[1].name, aliasarr[i].alias)) {
-                aliasarr[i] = ali;
+                aliasindex--;
+                found = 1;
+                break;
             }
+        }
+        // shift over to close empty spot
+        if (found) {
+            for (i; i < aliasindex; i++) {
+                aliasarr[i] = aliasarr[i + 1];
+            }
+            aliasarr[++i] = ali;
         }
     }
     else if (!strcmp(*arr[0].name, "bye")) {
@@ -221,18 +245,15 @@ int main()
     while (1) {
         
         switch (type = getCommand()) {
-            case BYE: {
-                // bye command issued, exit loop
-                return 0;
-            }
             case OK: {
                 process_command();
+                printf("%s> ",  getcwd(HOME, 256));
+
                 for(int i = 0; i < 100; i++) {
                     struct inst j = {""};
                     arr[i] = j;
                 }
                 counter = 0;
-                printf("%s> ",  getcwd(HOME, 256));
                 break;
             }
             case ERRORS: {
