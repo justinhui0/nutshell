@@ -18,8 +18,7 @@ void yyerror(char* e) {
     char* string;
 }
 
-%token <string> IDENTIFIER 
-%token NUMBER
+%token <string> IDENTIFIER
 %nterm <string> idn
 //%nterm <statement_list_t*>  value_list
 

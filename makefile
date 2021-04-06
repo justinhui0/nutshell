@@ -5,6 +5,7 @@ all:  bison-config flex-config nutshell
 bison-config:
 	bison -d parser.y
 
+
 flex-config:
 	flex lexer.l 
 

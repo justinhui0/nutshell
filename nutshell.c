@@ -6,20 +6,18 @@
 #include <dirent.h>
 #include <errno.h>
 #include <assert.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdbool.h>
 
 #include "global.h"
 #include "parser.tab.h"
 
 enum CMD { ERRORS, OK };
-struct alias {
-    char* alias;
-    char* original;
-};
-int aliasindex = 0;
-struct alias ali = {"", ""};
-struct alias aliasarr[100];
+
 char HOME[256];
 
+struct alias ali = {"", ""};
 extern char **environ;
 
 // source: https://stackoverflow.com/questions/9210528/split-string-with-delimiters-in-c
@@ -72,6 +70,7 @@ char** str_split(char* a_str, const char a_delim)
 }
 
 void initialize() {
+    aliasindex = 0;
     // initialize alias array
     for (int i = 0; i < 100; i++)
     {
@@ -115,71 +114,127 @@ enum CMD getCommand() {
         return OK;
     }
 }
+bool isIO() {
+        for (int i = 1; i < counter; i++) {
+            if(!strcmp(*arr[i].name, "<<") ) {
+                return true;
+            }
+            else if(!strcmp(*arr[i].name, ">>") ) {
+                return true;
+            }
+            else if(!strcmp(*arr[i].name, ">")) {
+                return true;
+            }
+            else if(!strcmp(*arr[i].name, "<")) {
+                return true;
+            }
+        }
+        return false;
+}
 void doit() { 
-    // reference: https://stackoverflow.com/questions/19461744/how-to-make-parent-wait-for-all-child-processes-to-finish
     pid_t child_pid, wpid;
     int retStatus;
+    bool success = false;
     if (child_pid = fork() == 0)
-    {
+    {   // reference: https://stackoverflow.com/questions/19461744/how-to-make-parent-wait-for-all-child-processes-to-finish
         char *PATH = getenv("PATH");
         // parse path and split on : delimiters
         char** pathArr = str_split(PATH, ':');
 
-        char *args[counter + 1];
-
         for (int i = 0; *(pathArr + i); i++) {
+            int in = 0;
+            int out = 0;
+            char *args[counter + 1];
+            char *args_clean[counter + 1]; // source: https://stackoverflow.com/questions/52939356/redirecting-i-o-in-a-custom-shell-program-written-in-c
+            int cleanIndex = 0;
             // first arg = PATH + /executable
             size_t len = strlen(*arr[0].name) + strlen("/") + strlen(*(pathArr + i));
             /* allocate memory for the new string */
-            char* str = malloc(len + 1);
+            char *str = malloc(len + 1);
 
             strcpy(str, *(pathArr + i));
             strcat(str, "/");
             strcat(str, *arr[0].name); 
 
             args[0] = str;
+            args_clean[cleanIndex++] = str;
 
             for (int i = 1; i < counter; i++)
             {
                 args[i] = *arr[i].name;
             }
 
-            args[counter] = NULL;
+                for (int i = 1; i < counter; i++) {
+                    if(!strcmp(args[i], "<")) {
+                        ++i;
+                        if((in = open(args[i], O_RDONLY)) < 0) {
+                            printf("error opening file\n");
+                        }
+                        dup2(in, STDIN_FILENO);
+                        close(in);
+                        continue;
+                    }
+                    else if(!strcmp(args[i], ">")) {
+                        ++i;
+                        out = creat(args[i], 0644);
+                        dup2(out,STDOUT_FILENO);
+                        close(out);    
+                        continue;
+                    }
+                    else if(!strcmp(args[i], ">>")) {
+                        ++i;
+                        int append = open(args[i], O_CREAT | O_RDWR | O_APPEND, 0644);
+                        dup2(append, STDOUT_FILENO);
+                        close(append); 
+                        continue;               
+                    }
+                    else if(!strcmp(args[i], "<<")) {
+                        ++i;
+                        int append = open(args[i], O_CREAT | O_RDWR | O_APPEND, 0644);
+                        dup2(append, STDIN_FILENO);
+                        close(append);   
+                        continue;
+                    }
+                    args_clean[cleanIndex++] = args[i];
+                }
 
-            execv(args[0],args);
+            args_clean[cleanIndex] = NULL;
+            execv(args_clean[0], args_clean);
+            /*
+            if (!= -1)
+            {
+                success = true;
+                return;
+            }
+            */
         }
+        /*
+        if (!success) {
+            printf("Command did not execute, check PATH or look for input error\n");
+        }
+        */
         exit(0);
+
     }
     else if (child_pid == -1)
         perror("fork");
     else {
         waitpid(child_pid, &retStatus, 0);
+
     }
 }
 
 void process_command() {
-    char* foundAlias = "";
-    for(int i = 0; i < 100; i++) {
-        if(!strcmp(*arr[0].name, aliasarr[i].alias)) {
-            foundAlias = aliasarr[i].original;
-        }
-    }
-
-    // last val is &, run command in background... fork?
-    if (!strcmp(*arr[counter - 1].name, "&")) {
-        pid_t child_pid;
-        counter--;
-        if (child_pid = fork() < 0) {
-            perror("fork");
-            return;
-        } else if (child_pid > 0) { // parent process
-            return;
-        }
-    }
-  
-    if(!strcmp(*arr[0].name, "setenv")||!strcmp(foundAlias, "setenv")) {
-        if (strcmp(*arr[2].name, "") != 0) { 
-            if(setenv(*arr[1].name,*arr[2].name, 1) == -1) {
+    if(!strcmp(*arr[0].name, "setenv")) {
+        char *val;
+        if (strcmp(*arr[2].name, "") != 0)
+        {
+            if (!strcmp(*arr[1].name, "PATH")) {
+                val = getenv("PATH");
+                strcat(val, *arr[2].name);
+                setenv("PATH", val, 1);
+            }
+            else if(setenv(*arr[1].name,*arr[2].name, 1) == -1) {
                 printf("setenv error\n");
             }
         }
@@ -187,7 +242,7 @@ void process_command() {
             printf("value required\n");
         }
     }
-    else if (!strcmp(*arr[0].name, "printenv")||!strcmp(foundAlias, "printenv")) { 
+    else if (!strcmp(*arr[0].name, "printenv")) { 
         int i = 1;
         char *s = *environ;
         for (; s; i++) {
@@ -195,23 +250,46 @@ void process_command() {
             s = *(environ+i);
         }      
     } 
-    else if (!strcmp(*arr[0].name, "unsetenv")||!strcmp(foundAlias, "unsetenv")) {
+    else if (!strcmp(*arr[0].name, "unsetenv")) {
         unsetenv(*arr[1].name);
+        if (!strcmp(*arr[1].name, "PATH")) {
+            setenv("PATH", ".", 1);
+        }
+        else if (!strcmp(*arr[1].name, "HOME")) {
+            setenv("HOME", "NULL", 1);
+        }
         //printf("implement %s\n", *arr[0].name);
     }
-    else if (!strcmp(*arr[0].name, "cd") || !strcmp(foundAlias, "cd")) {
-        chdir(*arr[1].name);
+    else if (!strcmp(*arr[0].name, "cd"))
+    {
+        int i = chdir(*arr[1].name);
+        if(i != 0) {
+            printf("%s Directory not found\n", *arr[1].name );
+        }        
     }
     else if (!strcmp(*arr[0].name, "alias")) {
-        if(!strcmp(*arr[1].name , "")) {
+        if(!strcmp(*arr[1].name , "")) { // alias with no args: print all aliases
             for(int i = 0; i < aliasindex; i++) {
                 printf("alias %s=\'%s\'\n", aliasarr[i].alias, aliasarr[i].original);
             }
-        } else {
-            struct alias al = {*arr[1].name, *arr[2].name};
-            aliasarr[aliasindex] = al;
-            aliasindex = aliasindex+1;
+            return;
         }
+        if (!strcmp(*arr[1].name, *arr[2].name)) { // name == word
+            printf("Error, expansion of \"%s\" would create a loop.\n", *arr[1].name);
+        }
+
+        for (int i = 0; i < aliasindex; i++)
+        {
+            // deal with infinite loop somewhere here
+            if (!strcmp(aliasarr[i].alias, *arr[1].name)) { // alias already exists, overwrite it
+                strcpy(aliasarr[i].original, *arr[2].name);
+                return;
+            }
+        }
+        // not found, we need to add a new entry.
+        struct alias al = {*arr[1].name, *arr[2].name};
+        aliasarr[aliasindex] = al;
+        aliasindex = aliasindex+1; 
     }
     else if (!strcmp(*arr[0].name, "unalias")) {
         int i = 0;
@@ -230,12 +308,30 @@ void process_command() {
             }
             aliasarr[++i] = ali;
         }
+        else {
+            printf("%s Alias not found\n", aliasarr[i].alias);
+        }
     }
     else if (!strcmp(*arr[0].name, "bye")) {
         exit(1);
-    } else {
-        doit();
+    } 
+       
+    /*
+        // last val is &, run command in background... fork?
+    if (!strcmp(*arr[counter - 1].name, "&")) {
+        pid_t child_pid;
+        counter--;
+        if (child_pid = fork() < 0) {
+            perror("fork");
+            return;
+        } else if (child_pid > 0) { // parent process
+            return;
+        }
     }
+    */
+    doit();
+    
+
 }
 
 int main()
