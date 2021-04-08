@@ -143,43 +143,41 @@ void doit() {
 
             args[0] = str;
             args_clean[cleanIndex++] = str;
-
+            bool expanded = false;
             for (int i = 1; i < counter; i++)
             {
                 args[i] = *arr[i].name;
-            }
+            }int c = 0;
             args[counter+1] == NULL;
             for (int i = 1; i < counter; i++) {
-                if(!strcmp(args[i], "*")) {
+                if(!strcmp(args[i], "*")) {args[i] = "nope";
                     int toadd = 0;
+                    expanded = true;
                     DIR *d;
                     struct dirent *dir;
                     d = opendir(".");
                     char *matched[100]; 
                     if (d) {
-                        while ((dir = readdir(d)) != NULL) {                            printf("%s\n",dir->d_name);    
-                            if(strstr(args[i+1], dir->d_name) != NULL) {
+                        while ((dir = readdir(d)) != NULL) {                               
+                            if(strstr(dir->d_name, args[i+1]) != NULL) {
                                 matched[toadd] = dir->d_name;
                                 toadd++;
                             }
                         }
-
-                     
                         closedir(d);
-                    }
-                    
-                    toadd--;
-                    char* arrexpand[counter+toadd];
+                    }                    
+                    char* arrexpand[i+toadd+1];
                     arrexpand[0] = str;
-                    for(int i = 0; i < counter; i++) {
-                        arrexpand[i] = *arr[i].name;
+                    for(int j = 1; j < i; j++) {
+                        arrexpand[j] = *arr[j].name;
                     }
-                    for(int i = counter; i < toadd; i++) {
-                        arrexpand[i] = matched[i];
+                    int ind = 0;
+                    for(int j = i; j < toadd+1; j++) {
+                        arrexpand[j] = matched[ind];
+                        ind++;
                     }
-                    arrexpand[counter+toadd] = NULL;
+                    arrexpand[i+toadd+1] = NULL;
                     execv(arrexpand[0], arrexpand);
-                    return;
                 }
                  if(!strcmp(args[i], "<")) {
                     ++i;
@@ -228,9 +226,10 @@ void doit() {
                 }
                 args_clean[cleanIndex++] = args[i];
             }
-
-            args_clean[cleanIndex] = NULL;
-            execv(args_clean[0], args_clean);
+            if(!expanded) {
+                args_clean[cleanIndex] = NULL;
+                execv(args_clean[0], args_clean);
+            }
             /*
             if (!= -1)
             {
