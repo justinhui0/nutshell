@@ -3,14 +3,36 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include "global.h"
+
+char* subAliases(char* name){
+    for (int i = 0; i < aliasindex; i++) {
+        if(strcmp(aliasarr[i].alias, name) == 0) {
+            return aliasarr[i].original;
+        }
+    }
+    return name;
+}
+bool ifAlias(char* name){
+    if (counter != 0) {
+        return false;
+    }
+    for (int i = 0; i < aliasindex; i++) {
+        if(strcmp(aliasarr[i].alias, name) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
 %}
 
 %x EXPECT_ENVIRONMENT
 %x EXPECT_STRING
 
-DIGIT [0-9]
 /* char [*A-Za-z./~&\-] */
-char [A-Za-z.*/-]
+char [A-Za-z./><~&-]
+star [*]
 QUOTE ["]
 NOTQUOTE [^"]
 %%
@@ -27,5 +49,14 @@ NOTQUOTE [^"]
 <EXPECT_ENVIRONMENT>{char}+     { yylval.string = getenv(yytext); return IDENTIFIER; }
 <EXPECT_ENVIRONMENT>\}          BEGIN(INITIAL);
 
-{char}+                         { yylval.string = strdup(yytext); return IDENTIFIER; }
-{DIGIT}+                        return NUMBER;
+{char}+                         {   if(ifAlias(yytext)) {
+                                        char *yycopy = strdup( subAliases(yytext) );
+                                        for ( int i = strlen(subAliases(yytext)) - 1; i >= 0; --i )
+                                            unput( yycopy[i] );
+                                        free( yycopy );
+                                    } else {
+                                        yylval.string = strdup(yytext); 
+                                        return IDENTIFIER;
+                                    }
+                                }
+{star}                          { yylval.string = strdup(yytext); return IDENTIFIER;}

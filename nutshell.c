@@ -19,6 +19,7 @@ char HOME[256];
 
 struct alias ali = {"", ""};
 extern char **environ;
+bool background = false;
 
 // source: https://stackoverflow.com/questions/9210528/split-string-with-delimiters-in-c
 char** str_split(char* a_str, const char a_delim)
@@ -114,23 +115,7 @@ enum CMD getCommand() {
         return OK;
     }
 }
-bool isIO() {
-        for (int i = 1; i < counter; i++) {
-            if(!strcmp(*arr[i].name, "<<") ) {
-                return true;
-            }
-            else if(!strcmp(*arr[i].name, ">>") ) {
-                return true;
-            }
-            else if(!strcmp(*arr[i].name, ">")) {
-                return true;
-            }
-            else if(!strcmp(*arr[i].name, "<")) {
-                return true;
-            }
-        }
-        return false;
-}
+
 void doit() { 
     pid_t child_pid, wpid;
     int retStatus;
@@ -154,7 +139,7 @@ void doit() {
 
             strcpy(str, *(pathArr + i));
             strcat(str, "/");
-            strcat(str, *arr[0].name); 
+            strcat(str, *arr[0].name);
 
             args[0] = str;
             args_clean[cleanIndex++] = str;
@@ -163,40 +148,86 @@ void doit() {
             {
                 args[i] = *arr[i].name;
             }
-
-                for (int i = 1; i < counter; i++) {
-                    if(!strcmp(args[i], "<")) {
-                        ++i;
-                        if((in = open(args[i], O_RDONLY)) < 0) {
-                            printf("error opening file\n");
+            args[counter+1] == NULL;
+            for (int i = 1; i < counter; i++) {
+                if(!strcmp(args[i], "*")) {
+                    int toadd = 0;
+                    DIR *d;
+                    struct dirent *dir;
+                    d = opendir(".");
+                    char *matched[100]; 
+                    if (d) {
+                        while ((dir = readdir(d)) != NULL) {                            printf("%s\n",dir->d_name);    
+                            if(strstr(args[i+1], dir->d_name) != NULL) {
+                                matched[toadd] = dir->d_name;
+                                toadd++;
+                            }
                         }
-                        dup2(in, STDIN_FILENO);
-                        close(in);
-                        continue;
+
+                     
+                        closedir(d);
                     }
-                    else if(!strcmp(args[i], ">")) {
-                        ++i;
-                        out = creat(args[i], 0644);
-                        dup2(out,STDOUT_FILENO);
-                        close(out);    
-                        continue;
+                    
+                    toadd--;
+                    char* arrexpand[counter+toadd];
+                    arrexpand[0] = str;
+                    for(int i = 0; i < counter; i++) {
+                        arrexpand[i] = *arr[i].name;
                     }
-                    else if(!strcmp(args[i], ">>")) {
-                        ++i;
-                        int append = open(args[i], O_CREAT | O_RDWR | O_APPEND, 0644);
-                        dup2(append, STDOUT_FILENO);
-                        close(append); 
-                        continue;               
+                    for(int i = counter; i < toadd; i++) {
+                        arrexpand[i] = matched[i];
                     }
-                    else if(!strcmp(args[i], "<<")) {
-                        ++i;
-                        int append = open(args[i], O_CREAT | O_RDWR | O_APPEND, 0644);
-                        dup2(append, STDIN_FILENO);
-                        close(append);   
-                        continue;
-                    }
-                    args_clean[cleanIndex++] = args[i];
+                    arrexpand[counter+toadd] = NULL;
+                    execv(arrexpand[0], arrexpand);
+                    return;
                 }
+                 if(!strcmp(args[i], "<")) {
+                    ++i;
+                    if((in = open(args[i], O_RDONLY)) < 0) {
+                        printf("error opening file\n");
+                    }
+                    dup2(in, STDIN_FILENO);
+                    close(in);
+                    continue;
+                }
+                else if(!strcmp(args[i], ">")) {
+                     ++i;
+                    out = creat(args[i], 0644);
+                    dup2(out,STDOUT_FILENO);
+                    close(out);    
+                    continue;
+                }
+                else if(!strcmp(args[i], ">>")) {
+                    ++i;
+                    int append = open(args[i], O_CREAT | O_RDWR | O_APPEND, 0644);
+                    dup2(append, STDOUT_FILENO);
+                    close(append); 
+                    continue;               
+                }
+                else if(!strcmp(args[i], "<<")) {
+                    ++i;
+                    int append = open(args[i], O_CREAT | O_RDWR | O_APPEND, 0644);
+                    dup2(append, STDIN_FILENO);
+                    close(append);   
+                    continue;
+                }
+                if(!strcmp(args[i], "||")) {
+                    //PIPES
+                    int pd[2];
+
+                    if(pipe(pd) ==-1) {
+                        printf("Pipe failed");
+                    }
+                    if(!fork()) {
+                        dup2(pd[1], 1);
+                        execv(args[0], args);
+                        abort();
+                    }
+                    dup2(pd[0],0);
+                    close(pd[1]);
+                }
+                args_clean[cleanIndex++] = args[i];
+            }
 
             args_clean[cleanIndex] = NULL;
             execv(args_clean[0], args_clean);
@@ -219,6 +250,10 @@ void doit() {
     else if (child_pid == -1)
         perror("fork");
     else {
+        if (background) {
+            background = false;
+            return;
+        }
         waitpid(child_pid, &retStatus, 0);
 
     }
@@ -226,13 +261,26 @@ void doit() {
 
 void process_command() {
     if(!strcmp(*arr[0].name, "setenv")) {
-        char *val;
         if (strcmp(*arr[2].name, "") != 0)
         {
             if (!strcmp(*arr[1].name, "PATH")) {
-                val = getenv("PATH");
-                strcat(val, *arr[2].name);
-                setenv("PATH", val, 1);
+                char* path = getenv("PATH");
+                char** newPaths = str_split(*arr[2].name, ':');
+
+                for (int i = 0; *(newPaths + i); i++) { 
+                    char* first = malloc(sizeof(char) * 2);
+                    strncpy(first, *(newPaths + i), sizeof(char));
+                    strcat(first, "\0");
+                    if (!strcmp(first, "~")) {
+                        char* expandedPath = getenv("HOME");
+                        char* choppedStr = *(newPaths + i) + 1;
+                        strcat(expandedPath, choppedStr);
+                        strcpy(*(newPaths + i), expandedPath); // replace tilde string with full string
+                    }
+                    strcat(path, ":");
+                    strcat(path, *(newPaths + i));
+                }
+                setenv("PATH", path, 1);
             }
             else if(setenv(*arr[1].name,*arr[2].name, 1) == -1) {
                 printf("setenv error\n");
@@ -316,19 +364,10 @@ void process_command() {
         exit(1);
     } 
        
-    /*
-        // last val is &, run command in background... fork?
     if (!strcmp(*arr[counter - 1].name, "&")) {
-        pid_t child_pid;
         counter--;
-        if (child_pid = fork() < 0) {
-            perror("fork");
-            return;
-        } else if (child_pid > 0) { // parent process
-            return;
-        }
+        background = true;
     }
-    */
     doit();
     
 
