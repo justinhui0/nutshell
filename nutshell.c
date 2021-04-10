@@ -70,10 +70,24 @@ char** str_split(char* a_str, const char a_delim)
     return result;
 }
 
+char *getAlias(char *name)
+{
+    for (int i = 0; i < aliasindex; i++)
+    {
+        if (strcmp(aliasarr[i].alias, name) == 0)
+        {
+            return aliasarr[i].original;
+        }
+    }
+    return name;
+}
+
 void initialize() {
+    firstWord = true;
     aliasindex = 0;
-    // initialize alias array
-    for (int i = 0; i < 100; i++)
+    pipeCtr = 1;
+        // initialize alias array
+        for (int i = 0; i < 100; i++)
     {
         aliasarr[i] = ali;
     }
@@ -125,140 +139,207 @@ void doit() {
         char *PATH = getenv("PATH");
         // parse path and split on : delimiters
         char** pathArr = str_split(PATH, ':');
-
-        for (int i = 0; *(pathArr + i); i++) {
-            int in = 0;
-            int out = 0;
-            char *args[counter + 1];
-            char *args_clean[counter + 1]; // source: https://stackoverflow.com/questions/52939356/redirecting-i-o-in-a-custom-shell-program-written-in-c
-            int cleanIndex = 0;
-            // first arg = PATH + /executable
-            size_t len = strlen(*arr[0].name) + strlen("/") + strlen(*(pathArr + i));
-            /* allocate memory for the new string */
-            char *str = malloc(len + 1);
-
-            strcpy(str, *(pathArr + i));
-            strcat(str, "/");
-            strcat(str, *arr[0].name);
-
-            args[0] = str;
-            args_clean[cleanIndex++] = str;
-            bool expanded = false;
-            for (int i = 1; i < counter; i++)
+        
+            for (int i = 0; *(pathArr + i); i++)
             {
-                args[i] = *arr[i].name;
-            }int c = 0;
-            args[counter+1] == NULL;
-            for (int i = 1; i < counter; i++) {
-                if(!strcmp(args[i], "*")) {args[i] = "nope";
-                    int toadd = 0;
-                    expanded = true;
-                    DIR *d;
-                    struct dirent *dir;
-                    d = opendir(".");
-                    char *matched[100]; 
-                    if (d) {
-                        while ((dir = readdir(d)) != NULL) {                               
-                            if(strstr(dir->d_name, args[i+1]) != NULL) {
-                                matched[toadd] = dir->d_name;
-                                toadd++;
+                int in = 0;
+                int out = 0;
+                char *args[counter + 1];
+                char *args_clean[counter + 1]; // source: https://stackoverflow.com/questions/52939356/redirecting-i-o-in-a-custom-shell-program-written-in-c
+                int cleanIndex = 0;
+                // first arg = PATH + /executable
+                size_t len = strlen(*arr[0].name) + strlen("/") + strlen(*(pathArr + i));
+                /* allocate memory for the new string */
+                char *str = malloc(len + 1);
+
+                strcpy(str, *(pathArr + i));
+                strcat(str, "/");
+                strcat(str, *arr[0].name);
+
+                args[0] = str;
+                args_clean[cleanIndex++] = str;
+                bool expanded = false;
+                for (int i = 1; i < counter; i++)
+                {
+                    args[i] = *arr[i].name;
+                }
+                args[counter + 1] == NULL;
+                
+                for (int i = 1; i < counter; i++)
+                {
+                    if (!strcmp(args[i], "*"))
+                    {
+                        int toadd = 0;
+                        int index = i;
+                        expanded = true;
+                        DIR *d;
+                        struct dirent *dir;
+                        d = opendir(".");
+                        char *matched[100];
+                        if (d)
+                        {
+                            while ((dir = readdir(d)) != NULL)
+                            {
+                                if (strstr(dir->d_name, args[index + 1]) != NULL)
+                                {
+                                    matched[toadd] = dir->d_name;
+                                    toadd++;
+                                }
                             }
+                            closedir(d);
                         }
-                        closedir(d);
-                    }                    
-                    char* arrexpand[i+toadd+1];
-                    arrexpand[0] = str;
-                    for(int j = 1; j < i; j++) {
-                        arrexpand[j] = *arr[j].name;
+                        char *arrexpand[index + toadd + 1];
+                        arrexpand[0] = str;
+                        for (int j = 1; j < index; j++)
+                        {
+                            arrexpand[j] = *arr[j].name;
+                        }
+                        int ind = 0;
+                        for (int j = index; j < toadd + 1; j++)
+                        {
+                            arrexpand[j] = matched[ind];
+                            ind++;
+                        }
+                        arrexpand[index + toadd + 1] = NULL;
+                        execv(arrexpand[0], arrexpand);
                     }
-                    int ind = 0;
-                    for(int j = i; j < toadd+1; j++) {
-                        arrexpand[j] = matched[ind];
-                        ind++;
+                    else if (!strcmp(args[i], "?"))
+                    {
+                        int toadd = 0;
+                        int index = i;
+                        expanded = true;
+                        DIR *d;
+                        struct dirent *dir;
+                        d = opendir(".");
+                        char *matched[100];
+                        if (d)
+                        {
+                            while ((dir = readdir(d)) != NULL)
+                            {
+                                if (strstr(dir->d_name, args[index + 1]) != NULL && (strlen(dir->d_name) - strlen(args[index + 1]) == 1))
+                                {
+                                    matched[toadd] = dir->d_name;
+                                    toadd++;
+                                }
+                            }
+                            closedir(d);
+                        }
+                        char *arrexpand[index + toadd + 1];
+                        arrexpand[0] = str;
+                        for (int j = 1; j < index; j++)
+                        {
+                            arrexpand[j] = *arr[j].name;
+                        }
+                        int ind = 0;
+                        for (int j = index; j < toadd + 1; j++)
+                        {
+                            arrexpand[j] = matched[ind];
+                            ind++;
+                        }
+                        arrexpand[index + toadd + 1] = NULL;
+                        execv(arrexpand[0], arrexpand);
                     }
-                    arrexpand[i+toadd+1] = NULL;
-                    execv(arrexpand[0], arrexpand);
-                }
-                 if(!strcmp(args[i], "<")) {
-                    ++i;
-                    if((in = open(args[i], O_RDONLY)) < 0) {
-                        printf("error opening file\n");
+                    else if (!strcmp(args[i], "<"))
+                    {
+                        ++i;
+                        if ((in = open(args[i], O_RDONLY)) < 0)
+                        {
+                            printf("error opening file\n");
+                        }
+                        dup2(in, STDIN_FILENO);
+                        close(in);
+                        continue;
                     }
-                    dup2(in, STDIN_FILENO);
-                    close(in);
-                    continue;
-                }
-                else if(!strcmp(args[i], ">")) {
-                     ++i;
-                    out = creat(args[i], 0644);
-                    dup2(out,STDOUT_FILENO);
-                    close(out);    
-                    continue;
-                }
-                else if(!strcmp(args[i], ">>")) {
-                    ++i;
-                    int append = open(args[i], O_CREAT | O_RDWR | O_APPEND, 0644);
-                    dup2(append, STDOUT_FILENO);
-                    close(append); 
-                    continue;               
-                }
-                else if(!strcmp(args[i], "<<")) {
-                    ++i;
-                    int append = open(args[i], O_CREAT | O_RDWR | O_APPEND, 0644);
-                    dup2(append, STDIN_FILENO);
-                    close(append);   
-                    continue;
-                }
-                if(!strcmp(args[i], "||")) {
-                    //PIPES
-                    int pd[2];
+                    else if (!strcmp(args[i], ">"))
+                    {
+                        ++i;
+                        out = creat(args[i], 0644);
+                        dup2(out, STDOUT_FILENO);
+                        close(out);
+                        continue;
+                    }
+                    else if (!strcmp(args[i], ">>"))
+                    {
+                        ++i;
+                        int append = open(args[i], O_CREAT | O_RDWR | O_APPEND, 0644);
+                        dup2(append, STDOUT_FILENO);
+                        close(append);
+                        continue;
+                    }
+                    else if (!strcmp(args[i], "<<"))
+                    {
+                        ++i;
+                        int append = open(args[i], O_CREAT | O_RDWR | O_APPEND, 0644);
+                        dup2(append, STDIN_FILENO);
+                        close(append);
+                        continue;
+                    }
+                    else if (!strcmp(args[i], "|"))
+                    {
+                        //PIPES
+                        printf("pipes");
+                        int pd[2];
 
-                    if(pipe(pd) ==-1) {
-                        printf("Pipe failed");
+                        if (pipe(pd) == -1)
+                        {
+                            printf("Pipe failed");
+                        }
+                        if (!fork())
+                        {
+                            dup2(pd[1], 1);
+                            execv(args[0], args);
+                            abort();
+                        }
+                        dup2(pd[0], 0);
+                        close(pd[1]);
                     }
-                    if(!fork()) {
-                        dup2(pd[1], 1);
-                        execv(args[0], args);
-                        abort();
-                    }
-                    dup2(pd[0],0);
-                    close(pd[1]);
+                    args_clean[cleanIndex++] = args[i];
                 }
-                args_clean[cleanIndex++] = args[i];
+                if (!expanded)
+                {
+                    args_clean[cleanIndex] = NULL;
+                    execv(args_clean[0], args_clean);
+                }
             }
-            if(!expanded) {
-                args_clean[cleanIndex] = NULL;
-                execv(args_clean[0], args_clean);
-            }
-            /*
-            if (!= -1)
-            {
-                success = true;
-                return;
-            }
-            */
-        }
-        /*
-        if (!success) {
-            printf("Command did not execute, check PATH or look for input error\n");
-        }
-        */
+
         exit(0);
 
     }
-    else if (child_pid == -1)
+     if (child_pid == -1)
         perror("fork");
-    else {
-        if (background) {
-            background = false;
-            return;
-        }
-        waitpid(child_pid, &retStatus, 0);
-
+    else { // parent
+        if (!background) {
+            waitpid(child_pid, &retStatus, 0);
+        }     
     }
 }
 
 void process_command() {
+    if(!strcmp(*arr[0].name, "TAB")) {
+        int matched = 0;
+        DIR *d;
+        struct dirent *dir;
+        d = opendir(".");
+        if (d) {
+            while ((dir = readdir(d)) != NULL) {                               
+                if(strstr(dir->d_name, *arr[0].name) != NULL) {
+                    matched++; 
+                }
+            }
+            closedir(d);
+        }                    
+        if(matched == 1) {
+            d = opendir(".");
+            if (d) {
+                while ((dir = readdir(d)) != NULL) {                               
+                    if(strstr(dir->d_name, *arr[0].name) != NULL) {
+                        *arr[0].name = dir->d_name;printf("%s", dir->d_name); 
+                    }
+                }
+                closedir(d);
+            }   
+        }
+    }
     if(!strcmp(*arr[0].name, "setenv")) {
         if (strcmp(*arr[2].name, "") != 0)
         {
@@ -323,12 +404,34 @@ void process_command() {
         }
         if (!strcmp(*arr[1].name, *arr[2].name)) { // name == word
             printf("Error, expansion of \"%s\" would create a loop.\n", *arr[1].name);
+            return;
+        }
+        if (aliasindex > 0) {
+            char *resToCheck = (char *) malloc(100);
+            strcpy(resToCheck, *arr[1].name);
+            char *curr = (char *) malloc(100);
+            strcpy(curr, *arr[2].name);
+            char *expanded = (char *)malloc(100);
+
+            while (true)
+            {
+                strcpy(expanded, getAlias(curr));
+                if (!strcmp(expanded, curr))
+                { // did not change, exit loop
+                    break;
+                }
+                else if (!strcmp(expanded, resToCheck))
+                { // made it back to start, infinite loop
+                    printf("infinite loop detected!!\n");
+                    return;
+                }
+                strcpy(curr, expanded);
+            }
         }
 
         for (int i = 0; i < aliasindex; i++)
         {
-            // deal with infinite loop somewhere here
-            if (!strcmp(aliasarr[i].alias, *arr[1].name)) { // alias already exists, overwrite it
+            if(!strcmp(aliasarr[i].alias, *arr[1].name)) { // alias already exists, overwrite it
                 strcpy(aliasarr[i].original, *arr[2].name);
                 return;
             }
@@ -381,13 +484,16 @@ int main()
         switch (type = getCommand()) {
             case OK: {
                 process_command();
-                printf("%s> ",  getcwd(HOME, 256));
+                printf("%s> ", getcwd(HOME, 256));
+                background = false;
 
                 for(int i = 0; i < 100; i++) {
                     struct inst j = {""};
                     arr[i] = j;
                 }
+                firstWord = true;
                 counter = 0;
+                pipeCtr = 1;
                 break;
             }
             case ERRORS: {
@@ -401,3 +507,4 @@ int main()
     return 0;
 
 }
+

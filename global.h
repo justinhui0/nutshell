@@ -1,3 +1,4 @@
+#include <stdbool.h>
 struct inst {
     char* name[50]; 
 };
@@ -11,3 +12,5 @@ struct alias {
 };
 int aliasindex;
 struct alias aliasarr[100];
+bool firstWord;
+int pipeCtr;

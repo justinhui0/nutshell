@@ -19,6 +19,8 @@ void yyerror(char* e) {
 }
 
 %token <string> IDENTIFIER
+%token <string> TAB
+
 %nterm <string> idn
 //%nterm <statement_list_t*>  value_list
 
@@ -33,3 +35,4 @@ input:
 idn:
     IDENTIFIER "||" IDENTIFIER {addins($1); counter = counter+1;addins("||"); counter = counter+1;addins($3); counter = counter+1;}
     | IDENTIFIER {addins($1); counter = counter+1;};
+    | TAB {addins("TAB"); counter = counter+1;};
