@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include "global.h"
 int yylex();
 void addins(char* inst) {
@@ -19,6 +20,7 @@ void yyerror(char* e) {
 }
 
 %token <string> IDENTIFIER
+%token <string> QUOTE
 %token <string> TAB
 
 %nterm <string> idn
@@ -33,6 +35,7 @@ input:
 
     
 idn:
-    IDENTIFIER "||" IDENTIFIER {addins($1); counter = counter+1;addins("||"); counter = counter+1;addins($3); counter = counter+1;}
-    | IDENTIFIER {addins($1); counter = counter+1;};
-    | TAB {addins("TAB"); counter = counter+1;};
+   QUOTE idn IDENTIFIER QUOTE { }
+    | IDENTIFIER {  if(!strcmp($1, "~")) {
+                        addins(thecwd);
+                    } else {addins($1); counter = counter+1;} };

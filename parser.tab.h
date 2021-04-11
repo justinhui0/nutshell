@@ -50,7 +50,8 @@ extern int yydebug;
   enum yytokentype
   {
     IDENTIFIER = 258,
-    TAB = 259
+    QUOTE = 259,
+    TAB = 260
   };
 #endif
 
@@ -58,11 +59,11 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 17 "parser.y"
+#line 18 "parser.y"
 
     char* string;
 
-#line 66 "parser.tab.h"
+#line 67 "parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
