@@ -350,8 +350,8 @@ static void yynoreturn yy_fatal_error ( const char* msg  );
 	(yy_hold_char) = *yy_cp; \
 	*yy_cp = '\0'; \
 	(yy_c_buf_p) = yy_cp;
-#define YY_NUM_RULES 13
-#define YY_END_OF_BUFFER 14
+#define YY_NUM_RULES 12
+#define YY_END_OF_BUFFER 13
 /* This struct is not used in this scanner,
    but its presence is necessary. */
 struct yy_trans_info
@@ -361,9 +361,9 @@ struct yy_trans_info
 	};
 static const flex_int16_t yy_accept[28] =
     {   0,
-        0,    0,    0,    0,    2,    2,   14,   13,   12,    5,
-        4,    1,   13,    9,   10,   11,    7,    8,    2,    3,
-       12,    4,    6,    9,    7,    2,    0
+        0,    0,    0,    0,    2,    2,   13,   12,   11,    5,
+        4,    1,   12,    8,    9,   10,   12,    2,    3,   11,
+        4,    6,    8,    0,    7,    2,    0
     } ;
 
 static const YY_CHAR yy_ec[256] =
@@ -372,7 +372,7 @@ static const YY_CHAR yy_ec[256] =
         1,    1,    4,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    4,    1,    5,    1,    6,    1,    7,    1,    1,
-        1,    8,    1,    1,    7,    7,    7,    1,    7,    7,
+        1,    8,    1,    1,    7,    7,    7,    7,    7,    7,
         7,    7,    7,    7,    7,    7,    7,    1,    1,    7,
         1,    7,    9,    1,    7,    7,    7,    7,    7,    7,
         7,    7,    7,    7,    7,    7,    7,    7,    7,    7,
@@ -406,34 +406,34 @@ static const YY_CHAR yy_meta[12] =
 
 static const flex_int16_t yy_base[31] =
     {   0,
-        0,    0,    5,   10,   27,   26,   30,   33,   27,   33,
-       24,   33,   17,   19,   33,   33,   13,   33,    0,   33,
-       17,   14,   33,    8,    7,    0,   33,   21,   23,   12
+        0,    0,   23,   22,   23,   22,   26,   31,   23,   31,
+       20,   31,   13,   15,   31,   31,    5,    0,   31,   19,
+       11,   31,    7,    0,   31,    0,   31,   16,   18,   12
     } ;
 
 static const flex_int16_t yy_def[31] =
     {   0,
        27,    1,   28,   28,   29,   29,   27,   27,   27,   27,
-       27,   27,   27,   27,   27,   27,   27,   27,   30,   27,
-       27,   27,   27,   27,   27,   30,    0,   27,   27,   27
+       27,   27,   27,   27,   27,   27,   27,   30,   27,   27,
+       27,   27,   27,   17,   27,   30,    0,   27,   27,   27
     } ;
 
-static const flex_int16_t yy_nxt[45] =
+static const flex_int16_t yy_nxt[43] =
     {   0,
         8,    9,   10,   11,   12,   13,   14,   15,   16,    8,
-        8,   17,   26,   25,   24,   18,   17,   22,   21,   25,
-       18,    8,    8,   19,   19,   24,   23,   22,   21,   27,
-       20,   20,    7,   27,   27,   27,   27,   27,   27,   27,
-       27,   27,   27,   27
+        8,   24,   26,   23,   21,   25,    8,    8,   18,   18,
+       20,   23,   22,   21,   20,   27,   19,   19,   17,   17,
+        7,   27,   27,   27,   27,   27,   27,   27,   27,   27,
+       27,   27
     } ;
 
-static const flex_int16_t yy_chk[45] =
+static const flex_int16_t yy_chk[43] =
     {   0,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-        1,    3,   30,   25,   24,    3,    4,   22,   21,   17,
-        4,   28,   28,   29,   29,   14,   13,   11,    9,    7,
-        6,    5,   27,   27,   27,   27,   27,   27,   27,   27,
-       27,   27,   27,   27
+        1,   17,   30,   23,   21,   17,   28,   28,   29,   29,
+       20,   14,   13,   11,    9,    7,    6,    5,    4,    3,
+       27,   27,   27,   27,   27,   27,   27,   27,   27,   27,
+       27,   27
     } ;
 
 static yy_state_type yy_last_accepting_state;
@@ -477,10 +477,43 @@ bool ifAlias(char* name){
     }
     return false;
 }
-#line 481 "lex.yy.c"
+bool ifEnvironment(char* name) {
+    if (getenv(name) == NULL) {
+        return false;
+    }
+    return true;
+}
+char* parseString(char** arr) {
+    char* res = malloc(100 * sizeof(char));
+    for (int i = 0; *(arr + i); i++) {
+        int len = strlen(*(arr + i));
+        if ((*(*(arr + i)) == '$') && (*(*(arr + i) + 1) == '{') && (*(*(arr + i) + len - 1)) == '}') {
+            char env[len - 3];
+            for (int j = 2; j < len - 1; j++) {
+                env[j - 2] = *(*(arr + i) + j);
+            }
+            printf("%s\n", env);
+            if (ifEnvironment(env)) {
+                strcat(res, getenv(env));
+                strcat(res, " ");
+                continue;
+            } else {
+                printf("env variable does not exist\n");
+                break;
+            }
+        }
+        else {
+            strcat(res, *(arr + i));
+            strcat(res, " ");
+        }
+    }
+    res[strlen(res) - 1] = '\0';
+    return res;
+}
+#line 514 "lex.yy.c"
 
 /* char [*A-Za-z./~&\-] */
-#line 484 "lex.yy.c"
+#line 517 "lex.yy.c"
 
 #define INITIAL 0
 #define EXPECT_ENVIRONMENT 1
@@ -699,10 +732,10 @@ YY_DECL
 		}
 
 	{
-#line 39 "lexer.l"
+#line 72 "lexer.l"
 
 
-#line 706 "lex.yy.c"
+#line 739 "lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -735,7 +768,7 @@ yy_match:
 			yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
 			++yy_cp;
 			}
-		while ( yy_base[yy_current_state] != 33 );
+		while ( yy_base[yy_current_state] != 31 );
 
 yy_find_action:
 		yy_act = yy_accept[yy_current_state];
@@ -761,49 +794,53 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 41 "lexer.l"
+#line 74 "lexer.l"
 BEGIN(EXPECT_STRING);
 	YY_BREAK
 case 2:
 /* rule 2 can match eol */
 YY_RULE_SETUP
-#line 42 "lexer.l"
-{ yylval.string = strdup(yytext); return IDENTIFIER; }
+#line 75 "lexer.l"
+{ char** arr = str_split(yytext, ' '); yylval.string = strdup(parseString(arr)); return IDENTIFIER; }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 43 "lexer.l"
-BEGIN(INITIAL);                         
+#line 76 "lexer.l"
+BEGIN(INITIAL);                      
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 45 "lexer.l"
+#line 79 "lexer.l"
 { };
 	YY_BREAK
 case 5:
 /* rule 5 can match eol */
 YY_RULE_SETUP
-#line 47 "lexer.l"
+#line 81 "lexer.l"
 return -1;
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 49 "lexer.l"
+#line 83 "lexer.l"
 BEGIN(EXPECT_ENVIRONMENT);
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 50 "lexer.l"
-{ yylval.string = getenv(yytext); return IDENTIFIER; }
+#line 84 "lexer.l"
+{   yytext[strlen(yytext) - 1] = '\0';
+                                    if (ifEnvironment(yytext)) {
+                                        char* yycopy = strdup( getenv(yytext) );
+                                        for (int i = strlen( getenv(yytext) ) - 1; i >= 0; --i) {
+                                            unput(yycopy[i]);
+                                        }
+                                        free(yycopy);
+                                    }
+                                    BEGIN(INITIAL);
+                                }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 51 "lexer.l"
-BEGIN(INITIAL);
-	YY_BREAK
-case 9:
-YY_RULE_SETUP
-#line 53 "lexer.l"
+#line 95 "lexer.l"
 {   if(ifAlias(yytext) && firstWord) {
                                         char *yycopy = strdup( subAliases(yytext) );
                                         for ( int i = strlen(subAliases(yytext)) - 1; i >= 0; --i )
@@ -816,27 +853,27 @@ YY_RULE_SETUP
                                     }
                                 }
 	YY_BREAK
+case 9:
+YY_RULE_SETUP
+#line 106 "lexer.l"
+{ yylval.string = strdup(yytext); return IDENTIFIER;}
+	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 64 "lexer.l"
+#line 107 "lexer.l"
 { yylval.string = strdup(yytext); return IDENTIFIER;}
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 65 "lexer.l"
-{ yylval.string = strdup(yytext); return IDENTIFIER;}
+#line 108 "lexer.l"
+{ yylval.string = strdup(yytext); return TAB;}
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 66 "lexer.l"
-{printf("sdfasd"); yylval.string = strdup(yytext); return TAB;}
-	YY_BREAK
-case 13:
-YY_RULE_SETUP
-#line 68 "lexer.l"
+#line 110 "lexer.l"
 ECHO;
 	YY_BREAK
-#line 840 "lex.yy.c"
+#line 877 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(EXPECT_ENVIRONMENT):
 case YY_STATE_EOF(EXPECT_STRING):
@@ -1843,4 +1880,4 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 68 "lexer.l"
+#line 110 "lexer.l"

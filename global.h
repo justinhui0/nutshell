@@ -14,3 +14,7 @@ int aliasindex;
 struct alias aliasarr[100];
 bool firstWord;
 int pipeCtr;
+char *thecwd;
+
+char** str_split(char* a_str, const char a_delim);
+void addins(char *inst);

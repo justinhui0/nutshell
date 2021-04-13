@@ -1319,14 +1319,12 @@ yyreduce:
 
   case 5:
 #line 39 "parser.y"
-                 {  if(!strcmp((yyvsp[0].string), "~")) {
-                        addins(thecwd);
-                    } else {addins((yyvsp[0].string)); counter = counter+1;} }
-#line 1326 "parser.tab.c"
+                 {  addins((yyvsp[0].string)); counter = counter+1;}
+#line 1324 "parser.tab.c"
     break;
 
 
-#line 1330 "parser.tab.c"
+#line 1328 "parser.tab.c"
 
       default: break;
     }

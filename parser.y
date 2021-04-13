@@ -36,6 +36,4 @@ input:
     
 idn:
    QUOTE idn IDENTIFIER QUOTE { }
-    | IDENTIFIER {  if(!strcmp($1, "~")) {
-                        addins(thecwd);
-                    } else {addins($1); counter = counter+1;} };
+    | IDENTIFIER {  addins($1); counter = counter+1;};
