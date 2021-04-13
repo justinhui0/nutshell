@@ -129,18 +129,28 @@ enum CMD getCommand() {
         return OK;
     }
 }
-
 void doit()
 {
     pid_t child_pid, wpid;
     int retStatus;
     bool success = false;
+    bool expanded = false; // remove later
+    int pd[2];
+    pipe(pd);
+
     if (child_pid = fork() == 0)
     { // reference: https://stackoverflow.com/questions/19461744/how-to-make-parent-wait-for-all-child-processes-to-finish
+
+        //int save_in, save_out;
+        //save_in = dup(STDIN_FILENO);
+        //save_out = dup(STDOUT_FILENO);
+
+        dup2(0, pd[0]);      
+        
+        /*
         char *PATH = getenv("PATH");
         // parse path and split on : delimiters
         char **pathArr = str_split(PATH, ':');
-
         for (int i = 0; *(pathArr + i); i++)
         {
             int in = 0;
@@ -150,7 +160,7 @@ void doit()
             int cleanIndex = 0;
             // first arg = PATH + /executable
             size_t len = strlen(*arr[0].name) + strlen("/") + strlen(*(pathArr + i));
-            /* allocate memory for the new string */
+            // allocate memory for the new string
             char *str = malloc(len + 1);
 
             strcpy(str, *(pathArr + i));
@@ -278,78 +288,26 @@ void doit()
                     continue;
                 }
                 else if (!strcmp(args[i], "|"))
-                {
+                {               
                     //PIPES
                     char *tocopy[100];
                     int index = 0;
-                    int pd[2];
-                    bool stop = false;                               
-
-                    pipe(pd);
- 
-                    if (fork() == 0)
-                    { 
-                        close(0);
-                        close(pd[0]);
-                        close(pd[1]);
-
-                        for(int j = i+1; j <= counter && stop == false; j++) {
-                            if(strcmp(*arr[j].name, "|")) {
-                                tocopy[j] = *arr[j].name;
-                                //strcpy(tocopy[j],*arr[j].name);
-                                index++;
-                            }
-                            else {
-                                stop = true;
-                            }
+                       /* 
+                        for(int j = i-1; j >= 0 ; j--) {
+                            tocopy[j] = *arr[j].name;
+                            //strcpy(tocopy[j],*arr[j].name);
+                            index++;
+                             
                         }
                         int ii = i;
                         char *toret[index+1];
+
                         for (int i = 0; *(pathArr + i); i++)
                         {               
-                            size_t len = strlen(*arr[ii+1].name) + strlen("/") + strlen(*(pathArr + i));
-                            /* allocate memory for the new string */
+                            size_t len = strlen(*arr[0].name) + strlen("/") + strlen(*(pathArr + 0));
                             char *str = malloc(len + 1);
 
-                            strcpy(str, *(pathArr + i));
-                            strcat(str, "/");
-                            strcat(str, *arr[ii+1].name);
-                            toret[0] = str;
-                        }                          
-
-                        for(int k = 0; k < index-1; k++) {
-                            strcpy(toret[k], tocopy[k]);
-                            printf("%s", toret[k]);
-                        }
-                        toret[index] = NULL;
-                        
-                        execv(toret[0], toret);
-                        exit(0);
-                    }
-                    else {printf("SDFDS");
-                        close(1);
-                        close(pd[0]);
-                        close(pd[1]);
-                        dup(pd[1]);
-                        for(int j = i-1; j >= 0 && stop == false ; j--) {
-                            if(strcmp(*arr[j].name, "|")) {
-                                tocopy[j] = *arr[j].name;
-                                //strcpy(tocopy[j],*arr[j].name);
-                                index++;
-                            }
-                            else {
-                                stop = true;
-                            }
-                        }
-                        int ii = i;
-                        char *toret[index+1];//a | b 
-                        for (int i = 0; *(pathArr + i); i++)
-                        {               
-                            size_t len = strlen(*arr[0].name) + strlen("/") + strlen(*(pathArr + i));
-                            /* allocate memory for the new string */
-                            char *str = malloc(len + 1);
-
-                            strcpy(str, *(pathArr + i));
+                            strcpy(str, *(pathArr + 0));
                             strcat(str, "/");
                             strcat(str, *arr[0].name);
                             toret[0] = str;
@@ -358,27 +316,39 @@ void doit()
                             strcpy(toret[k], tocopy[k]);
                         }
                         toret[index] = NULL;
+                        execlp("ls", "ls", "-al", NULL);
+
+                        execv(toret[0], toret);                       
+                        abort();
                         
-                        execv(toret[0], toret);
-                        exit(0);
-                    }
+                        
+                        */
+                // }
+                //args_clean[cleanIndex++] = args[i];
+            // }
+            execl("/bin/ls", "ls", "-al", NULL);
+            close(pd[0]);
+            //dup2(pd[1], STDIN_FILENO);
 
-                }
-                args_clean[cleanIndex++] = args[i];
-            }
-            if (!expanded)
+/*
+            if (!expanded )
             {
-                args_clean[cleanIndex] = NULL;
-                execv(args_clean[0], args_clean);
+                //args_clean[cleanIndex] = NULL;
+                dup2(save_out, STDOUT_FILENO);
+                execl("/bin/grep", "grep", "alpha", NULL);
+                close(pd[1]);
+                dup2(save_in, STDIN_FILENO);
+                // execv(args_clean[0], args_clean);
             }
-        }
+        */
 
-        exit(0);
+        //exit(0);
     }
-    if (child_pid == -1)
+    if (child_pid == -1) {
         perror("fork");
+    }
     else
-    { // parent
+    { // parent1fd[1]//
         if (!background)
         {
             waitpid(child_pid, &retStatus, 0);
