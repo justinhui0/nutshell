@@ -21,6 +21,7 @@ struct alias ali = {"", ""};
 extern char **environ;
 bool background = false;
 long backg;
+int piping = 0;
 // source: https://stackoverflow.com/questions/9210528/split-string-with-delimiters-in-c
 char** str_split(char* a_str, const char a_delim)
 {
@@ -131,42 +132,100 @@ enum CMD getCommand() {
 }
 void doit()
 {
-    pid_t child_pid, wpid;
+    pid_t child_pid, wpid, grandchild_pid;
     int retStatus;
     bool success = false;
-    bool expanded = false; // remove later
-    int pd[2];
-    pipe(pd);
-
+    //bool expanded = false; // remove later
+    for(int i = 0; i < counter; i++) {
+        if (!strcmp(*arr[i].name, "|")) {
+            piping++;
+        }
+    }
     if (child_pid = fork() == 0)
     { // reference: https://stackoverflow.com/questions/19461744/how-to-make-parent-wait-for-all-child-processes-to-finish
-
-        //int save_in, save_out;
-        //save_in = dup(STDIN_FILENO);
-        //save_out = dup(STDOUT_FILENO);
-
-        dup2(0, pd[0]);      
-        
-        /*
         char *PATH = getenv("PATH");
         // parse path and split on : delimiters
         char **pathArr = str_split(PATH, ':');
+        if (piping == 0) {
+            // do something
+            printf("no piping\n");
+        }
+        else {
+            // source: https://stackoverflow.com/questions/52939356/redirecting-i-o-in-a-custom-shell-program-written-in-c
+
+            for (int i = 0; i < counter; i++) {
+                if (!strcmp(*arr[i].name, "|")) {
+                    int pd[2];
+                    pipe(pd);
+                    if (grandchild_pid = fork() == 0) {
+                        char *args[counter + 1];
+                        int index = 0;
+                        for (int k = i + 1; k < counter - 1; k++ ) {// ls tets.txt | head -2
+                            strcpy(args[k - i], *arr[k + 1].name);
+                            index++;
+                        }
+                        args[index] = NULL;
+                        dup2(pd[0], 0);
+
+                        for (int j = 0; *(pathArr + j); j++) {
+                            // first arg = PATH + /executable
+                            size_t len = strlen(*arr[i + 1].name) + strlen("/") + strlen(*(pathArr + j));
+                            // allocate memory for the new string
+                            char *str = malloc(len + 1);
+                            strcpy(str, *(pathArr + j));
+                            strcat(str, "/");
+                            strcat(str, *arr[i + 1].name);
+                            strcpy(args[0], str);
+
+                            execl("/usr/bin/head", "head", "-2", NULL);
+                            //execv(args[0], args);
+                        }
+                        close(pd[0]);
+                        //exit(0);
+
+                    } else {
+                        char *args[counter + 1];
+                        int index = 0;
+                        for (int k = 0; k < i - 1; k++ ) {
+                            strcpy(args[k + 1], *arr[k + 1].name);
+                            index++;
+                        }
+                        args[index] = NULL;
+                        dup2(pd[1], 1);
+
+                        for (int j = 0; *(pathArr + j); j++) {
+                            // first arg = PATH + /executable
+                            size_t len = strlen(*arr[0].name) + strlen("/") + strlen(*(pathArr + j));
+                            // allocate memory for the new string
+                            char *str = malloc(len + 1);
+                            strcpy(str, *(pathArr + j));
+                            strcat(str, "/");
+                            strcat(str, *arr[0].name);
+                            strcpy(args[0], str);
+
+                            execl("/usr/cat", "cat", "f3.txt", NULL);
+                            //execv(args[0], args);
+                        }                    
+                        close(pd[1]);
+                        //abort();
+                    }
+                }
+            }
+        }
+
+
+
+
+        /*
         for (int i = 0; *(pathArr + i); i++)
         {
-            int in = 0;
-            int out = 0;
-            char *args[counter + 1];
-            char *args_clean[counter + 1]; // source: https://stackoverflow.com/questions/52939356/redirecting-i-o-in-a-custom-shell-program-written-in-c
-            int cleanIndex = 0;
             // first arg = PATH + /executable
             size_t len = strlen(*arr[0].name) + strlen("/") + strlen(*(pathArr + i));
             // allocate memory for the new string
             char *str = malloc(len + 1);
-
             strcpy(str, *(pathArr + i));
             strcat(str, "/");
             strcat(str, *arr[0].name);
-
             args[0] = str;
             args_clean[cleanIndex++] = str;
             bool expanded = false;
@@ -175,7 +234,6 @@ void doit()
                 args[i] = *arr[i].name;
             }
             args[counter + 1] == NULL;
-
             for (int i = 1; i < counter; i++)
             {
                 if (!strcmp(args[i], "*"))
@@ -287,68 +345,30 @@ void doit()
                     close(append);
                     continue;
                 }
-                else if (!strcmp(args[i], "|"))
-                {               
-                    //PIPES
-                    char *tocopy[100];
-                    int index = 0;
-                       /* 
-                        for(int j = i-1; j >= 0 ; j--) {
-                            tocopy[j] = *arr[j].name;
-                            //strcpy(tocopy[j],*arr[j].name);
-                            index++;
-                             
-                        }
-                        int ii = i;
-                        char *toret[index+1];
+                else if (!strcmp(args[i], "|")) {
+                    if (grandchild_pid = fork() == 0) {
+                        dup2(pd[0], 0);
+                        execl("/usr/bin/head", "head", "-2", NULL);
+                        close(pd[0]);
+                        //exit(0);
 
-                        for (int i = 0; *(pathArr + i); i++)
-                        {               
-                            size_t len = strlen(*arr[0].name) + strlen("/") + strlen(*(pathArr + 0));
-                            char *str = malloc(len + 1);
-
-                            strcpy(str, *(pathArr + 0));
-                            strcat(str, "/");
-                            strcat(str, *arr[0].name);
-                            toret[0] = str;
-                        }
-                        for(int k = 0; k < index-1; k++) {
-                            strcpy(toret[k], tocopy[k]);
-                        }
-                        toret[index] = NULL;
-                        execlp("ls", "ls", "-al", NULL);
-
-                        execv(toret[0], toret);                       
-                        abort();
-                        
-                        
-                        */
-                // }
-                //args_clean[cleanIndex++] = args[i];
-            // }
-            execl("/bin/ls", "ls", "-al", NULL);
-            close(pd[0]);
-            //dup2(pd[1], STDIN_FILENO);
-
-/*
-            if (!expanded )
-            {
-                //args_clean[cleanIndex] = NULL;
-                dup2(save_out, STDOUT_FILENO);
-                execl("/bin/grep", "grep", "alpha", NULL);
-                close(pd[1]);
-                dup2(save_in, STDIN_FILENO);
-                // execv(args_clean[0], args_clean);
+                    } else {
+                        dup2(pd[1], 1);
+                        execl("/bin/cat", "cat", "f3.txt", NULL);                       
+                        close(pd[1]);
+                        //abort();
+                    }
+                }
             }
+        }
         */
-
-        //exit(0);
     }
+
     if (child_pid == -1) {
         perror("fork");
     }
     else
-    { // parent1fd[1]//
+    { 
         if (!background)
         {
             waitpid(child_pid, &retStatus, 0);
@@ -514,15 +534,19 @@ void process_command()
     }
     else if (!strcmp(*arr[0].name, "bye")) {
         exit(1);
-    } 
+    }
+    else {
+        doit();
+    }
        
+       /*
     if (!strcmp(*arr[counter - 1].name, "&")) {
         backg = (long)getppid();
         printf("[%lu] %lu\n",  (long)getppid(), (long) getpid());
         counter--;
         background = true;
     }
-    doit();
+    */
 }
 
 int main()
@@ -537,7 +561,7 @@ int main()
                 printf("%s> ", getcwd(HOME, 256));
                 thecwd = getcwd(HOME, 256);
                 background = false;
-
+                piping = 0;
                 for(int i = 0; i < 100; i++) {
                     struct inst j = {""};
                     arr[i] = j;
