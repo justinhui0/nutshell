@@ -8,6 +8,7 @@ int yylex();
 void addins(char* inst) {
     struct inst i = {inst};
     arr[counter] = i;
+    counter++;
 }
 
 void yyerror(char* e) {
@@ -36,4 +37,7 @@ input:
     
 idn:
    QUOTE idn IDENTIFIER QUOTE { }
-    | IDENTIFIER {  addins($1); counter = counter+1;};
+    | IDENTIFIER {  if(!strcmp($1, "<<EOF>>")) {
+                        addins("EOF");
+                        }else {addins($1);} };
+    | TAB {  addins("TAB"); };

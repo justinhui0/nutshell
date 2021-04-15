@@ -1,0 +1,1 @@
+/bin/cat: nop.txt: No such file or directory
