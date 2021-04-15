@@ -141,19 +141,14 @@ void doit() {
     if (pipeCtr > 0) { // x | y | z
         pid_t child_pid, grandchild_pid;
         int retStatus;
-        if (child_pid = fork() == 0) {
-            int pipefds[2 * pipeCtr];
-            for (int i = 0; i < 2 * pipeCtr; i++) {
-                if (pipe(pipefds + i*2) < 0) {
-                    perror("pipe");
-                    exit(EXIT_FAILURE);
-                }
-            }
-
+        if (child_pid = fork() == 0) { // piping based on https://stackoverflow.com/questions/916900/having-trouble-with-fork-pipe-dup2-and-exec-in-c/
+            int old_fds[2];
+            int new_fds[2];
             int nestedRetStatus;
             for (int i = 0; i < pipeCtr + 1; i++) { // loop through all commands
                 int pipeIndex = 0;
                 if (i < pipeCtr) {
+                    pipe(new_fds);
                     for (int j = startIndex; j < counter; j++) { // find index of next pipe
                         if (!strcmp(*arr[j].name, "|")) {
                             pipeIndex = j;
@@ -168,19 +163,20 @@ void doit() {
                     char* args[counter + 1];
 
                     if (i > 0) { // there is a previous command
-                        if (dup2(pipefds[(i - 1) * 2], 0) < 0) {
+                        if (dup2(old_fds[0], 0) < 0) {
                             perror("dup2");
                             exit(EXIT_FAILURE);
                         }
+                        close(old_fds[0]);
+                        close(old_fds[1]);
                     }
                     if (i < pipeCtr) { // there is a next command
-                        if (dup2(pipefds[i * 2 + 1], 1) < 0 ) {
+                        close(new_fds[0]);
+                        if (dup2(new_fds[1], 1) < 0 ) {
                             perror("dup2");
                             exit(EXIT_FAILURE);
                         }
-                    }
-                    for (int j = 0; j < 2 * pipeCtr; j++) {
-                        close(pipefds[j]);
+                        close(new_fds[1]);
                     }
                     // exec command i
                     int ctr = 0;
@@ -205,14 +201,21 @@ void doit() {
                     exit(EXIT_FAILURE);
                 }
                 else {
+                    if (i > 0) {
+                        close(old_fds[0]);
+                        close(old_fds[1]);
+                    }
+                    if (i < pipeCtr) {
+                        old_fds[0] = new_fds[0];
+                        old_fds[1] = new_fds[1];
+                    }
                     waitpid(grandchild_pid, &nestedRetStatus, 0);
                 }
                 startIndex = pipeIndex + 1;
             }
             if (pipeCtr > 0) {
-                for (int j = 0; j < 2 * pipeCtr; j++) {
-                    close(pipefds[j]);
-                }
+                close(old_fds[0]);
+                close(old_fds[1]);
             }
             exit(0);
         }
