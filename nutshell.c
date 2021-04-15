@@ -186,14 +186,28 @@ void doit() {
                     }
                     args[ctr] = NULL;
                     char* dir = malloc(100);
-                    strcpy(dir, "/usr/bin/");
-                    char* executable = strdup(args[0]);
-                    strcat(dir, executable);
-                    if (execv(dir, args) == -1 ) {
-                        printf("execv failed\n");
-                        fflush(stdout);
+
+
+                    char *PATH = getenv("PATH");
+                    // parse path and split on : delimiters
+                    char** pathArr = str_split(PATH, ':');
+            
+                    for (int i = 0; *(pathArr + i); i++)
+                    {
+                        strcpy(dir, *(pathArr + i));
+                        strcat(dir, "/");
+                        char* executable = strdup(args[0]);
+                        strcat(dir, executable);
+                        if (access(dir, X_OK) == 0) {
+                            if (execv(dir, args) == -1 ) {
+                                printf("execv failed\n");
+                                fflush(stdout);
+                            }
+                            free(dir);
+                            break;
+                        }
+                        free(dir);
                     }
-                    free(dir);
                     exit(0);
                 }
                 else if (grandchild_pid < 0) {
