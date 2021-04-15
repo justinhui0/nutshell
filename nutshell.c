@@ -20,7 +20,6 @@ char HOME[256];
 struct alias ali = {"", ""};
 extern char **environ;
 bool background = false;
-int startIndex;
 
 // source: https://stackoverflow.com/questions/9210528/split-string-with-delimiters-in-c
 char** str_split(char* a_str, const char a_delim)
@@ -84,7 +83,6 @@ char *getAlias(char *name)
 }
 
 void initialize() {
-    startIndex = 0;
     firstWord = true;
     aliasindex = 0;
     pipeCtr = 0;
@@ -133,6 +131,7 @@ enum CMD getCommand() {
 }
 
 void doit() {
+    int startIndex = 0;
     for (int i = 1; i < counter; i++) {
         if (!strcmp(*arr[i].name, "|")) {
             pipeCtr++;
@@ -604,7 +603,6 @@ int main()
                 firstWord = true;
                 counter = 0;
                 pipeCtr = 0;
-                startIndex = 0;
                 break;
             }
             case ERRORS: {
