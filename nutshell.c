@@ -20,6 +20,7 @@ char HOME[256];
 struct alias ali = {"", ""};
 extern char **environ;
 bool background = false;
+int startIndex;
 
 // source: https://stackoverflow.com/questions/9210528/split-string-with-delimiters-in-c
 char** str_split(char* a_str, const char a_delim)
@@ -83,6 +84,7 @@ char *getAlias(char *name)
 }
 
 void initialize() {
+    startIndex = 0;
     firstWord = true;
     aliasindex = 0;
     pipeCtr = 0;
@@ -136,81 +138,83 @@ void doit() {
             pipeCtr++;
         }
     }
-    int startIndex = 0;
-
     if (pipeCtr > 0) { // x | y | z
         pid_t child_pid, grandchild_pid;
         int retStatus;
         if (child_pid = fork() == 0) {
-            int old_fds[2];
-            int new_fds[2];
+            int pipefds[2 * pipeCtr];
+            for (int i = 0; i < 2 * pipeCtr; i++) {
+                if (pipe(pipefds + i*2) < 0) {
+                    perror("pipe");
+                    exit(EXIT_FAILURE);
+                }
+            }
+
             int nestedRetStatus;
             for (int i = 0; i < pipeCtr + 1; i++) { // loop through all commands
-                if (i < pipeCtr) { // there is a next command
-                    pipe(new_fds);
+                int pipeIndex = 0;
+                if (i < pipeCtr) {
+                    for (int j = startIndex; j < counter; j++) { // find index of next pipe
+                        if (!strcmp(*arr[j].name, "|")) {
+                            pipeIndex = j;
+                            break;
+                        }
+                    }
+                } else {
+                    pipeIndex = counter;
                 }
+                
                 if (grandchild_pid = fork() == 0) {
                     char* args[counter + 1];
-                    int pipeIndex;
 
                     if (i > 0) { // there is a previous command
-                        dup2(old_fds[0], 0);
-                        close(old_fds[0]);
-                        close(old_fds[1]);
+                        if (dup2(pipefds[(i - 1) * 2], 0) < 0) {
+                            perror("dup2");
+                            exit(EXIT_FAILURE);
+                        }
                     }
                     if (i < pipeCtr) { // there is a next command
-                        for (int j = startIndex; j < counter; j++) { // find index of next pipe
-                            if (!strcmp(*arr[j].name, "|")) {
-                                pipeIndex = j;
-                                break;
-                            }
+                        if (dup2(pipefds[i * 2 + 1], 1) < 0 ) {
+                            perror("dup2");
+                            exit(EXIT_FAILURE);
                         }
-                        close(new_fds[0]);
-                        dup2(new_fds[1], 1);
-                        close(new_fds[1]);
-                    } else {
-                        pipeIndex = counter;
                     }
-
+                    for (int j = 0; j < 2 * pipeCtr; j++) {
+                        close(pipefds[j]);
+                    }
                     // exec command i
+                    int ctr = 0;
                     for (int j = startIndex; j < pipeIndex; j++) {
-                        strcpy(args[j - startIndex], *arr[j].name);
+                        args[j - startIndex] = strdup(*arr[j].name);
+                        ctr++;
                     }
-                    startIndex = pipeIndex + 1;
+                    args[ctr] = NULL;
                     char* dir = malloc(100);
                     strcpy(dir, "/usr/bin/");
-                    strcat(dir, args[0]);
-                    execv(dir, args);
-
+                    char* executable = strdup(args[0]);
+                    strcat(dir, executable);
+                    if (execv(dir, args) == -1 ) {
+                        printf("execv failed\n");
+                        fflush(stdout);
+                    }
                     free(dir);
                     exit(0);
-                } 
+                }
+                else if (grandchild_pid < 0) {
+                    perror("fork");
+                    exit(EXIT_FAILURE);
+                }
                 else {
-                    if (i > 0) {
-                        close(old_fds[0]);
-                        close(old_fds[1]);
-                    }
-                    if (i < pipeCtr) {
-                        old_fds[0] = new_fds[0];
-                        old_fds[1] = new_fds[1];
-                    }
                     waitpid(grandchild_pid, &nestedRetStatus, 0);
                 }
+                startIndex = pipeIndex + 1;
             }
             if (pipeCtr > 0) {
-                close(old_fds[0]);
-                close(old_fds[1]);
+                for (int j = 0; j < 2 * pipeCtr; j++) {
+                    close(pipefds[j]);
+                }
             }
-
-            /*
-            char *PATH = getenv("PATH");
-            // parse path and split on : delimiters
-            char** pathArr = str_split(PATH, ':');
-            
-            for (int i = 0; *(pathArr + i); i++)
-            {
-            }
-            */
+            exit(0);
         }
         else {
             waitpid(child_pid, &retStatus, 0);
@@ -583,6 +587,7 @@ int main()
                 firstWord = true;
                 counter = 0;
                 pipeCtr = 0;
+                startIndex = 0;
                 break;
             }
             case ERRORS: {
