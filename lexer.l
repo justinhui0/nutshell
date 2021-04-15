@@ -63,10 +63,11 @@ char* parseString(char** arr) {
 %x EXPECT_STRING
 
 /* char [*A-Za-z./~&\-] */
-char [0-9A-Za-z.:|/><~&-]
+char [0-9A-Za-z.|/><&-]
 star [*]
 QUOTE ["]
 NOTQUOTE [^"]
+tilde [~]
 
 q [?]
 %%
@@ -105,5 +106,6 @@ q [?]
                                 }
 {star}                          { yylval.string = strdup(yytext); return IDENTIFIER;}
 {q}                          { yylval.string = strdup(yytext); return IDENTIFIER;}
-[\t]+                          { yylval.string = strdup(yytext); return TAB;}
+[\x1B]+              { yylval.string = strdup("tab"); return TAB;}
+[~]             { yylval.string = strdup(yytext); return IDENTIFIER;}
 

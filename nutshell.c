@@ -9,6 +9,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdbool.h>
+#include <pwd.h>
+#include <sys/types.h>
 
 #include "global.h"
 #include "parser.tab.h"
@@ -315,36 +317,85 @@ void doit() {
 }
 
 void process_command() {
-    if(!strcmp(*arr[0].name, "TAB")) {
-        int matched = 0;
-        DIR *d;
-        struct dirent *dir;
-        d = opendir(".");
-        if (d) {
-            while ((dir = readdir(d)) != NULL) {                               
-                if(strstr(dir->d_name, *arr[0].name) != NULL) {
-                    matched++; 
-                }
-            }
-            closedir(d);
-        }                    
-        if(matched == 1) {
+
+    for(int i = 0; i < counter; i++) {
+        if(!strcmp(*arr[i].name, "TAB")) {
+            int matched = 0;
+            DIR *d;
+            struct dirent *dir;
+            char * mat[100];
+            int index =0;
             d = opendir(".");
             if (d) {
                 while ((dir = readdir(d)) != NULL) {                               
-                    if(strstr(dir->d_name, *arr[0].name) != NULL) {
-                        *arr[0].name = dir->d_name;printf("%s", dir->d_name); 
+                    if(strstr(dir->d_name, *arr[i-1].name) != NULL) {
+                        matched++;
+                        mat[index] = dir->d_name;index++;
                     }
                 }
                 closedir(d);
-            }   
+            }    
+
+            if(matched == 1) {
+                d = opendir(".");
+                if (d) {
+                    while ((dir = readdir(d)) != NULL) {                               
+                        if(strstr(dir->d_name, *arr[i-1].name) != NULL) {
+                            strcpy(*arr[i-1].name,dir->d_name);
+                           // strcpy(*arr[i].name,"");
+                            counter--;//printf("%s",dir->d_name);
+                        }
+                    }
+                    closedir(d);
+                }   
+            }
+            else if(matched > 1) {
+                for(int j =0; j < index; j++) {
+                    printf("%s\n", mat[j]);
+                }
+            }
+        }  
+        if(!strcmp(*arr[i].name, "~")) {
+            if(!strcmp(*arr[i+1].name, "")) {
+                strcpy(*arr[i].name, getenv("HOME"));
+            }
+            else {
+                int cnt = 0;
+                char tocopy[100];
+                while (true) {
+                    errno = 0; // so we can distinguish errors from no more entries
+                    struct passwd* entry = getpwent();
+                    if (!entry) {
+                        if (errno) {
+                            return;
+                        }
+                        break;
+                    }
+                    if(strstr(entry->pw_name, *arr[i+1].name) != NULL) {
+                        cnt++;
+                        strcpy(tocopy, entry->pw_dir);
+                    }
+                }
+                endpwent();
+                if(cnt == 1) {
+                    strcpy(*arr[i].name, tocopy);
+                    strcpy(*arr[i+1].name, "");
+                    counter--;
+                }
+                else {
+                    printf("name does not match or is too broad\n");
+                }
+
+            }
         }
     }
+ 
+
     if(!strcmp(*arr[0].name, "setenv")) {
         if (strcmp(*arr[2].name, "") != 0)
         {
             if (!strcmp(*arr[1].name, "PATH")) {
-                char* path = malloc(1000);
+                char* path = getenv("PATH");
                 char** newPaths = str_split(*arr[2].name, ':');
 
                 for (int i = 0; *(newPaths + i); i++) { 
@@ -357,10 +408,9 @@ void process_command() {
                         strcat(expandedPath, choppedStr);
                         strcpy(*(newPaths + i), expandedPath); // replace tilde string with full string
                     }
-                    strcat(path, *(newPaths + i));
                     strcat(path, ":");
+                    strcat(path, *(newPaths + i));
                 }
-                path[strlen(path) - 1] = '\0';
                 setenv("PATH", path, 1);
             }
             else if(setenv(*arr[1].name,*arr[2].name, 1) == -1) {
