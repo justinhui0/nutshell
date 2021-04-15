@@ -63,7 +63,7 @@ char* parseString(char** arr) {
 %x EXPECT_STRING
 
 /* char [*A-Za-z./~&\-] */
-char [0-9A-Za-z.|/><~&-]
+char [0-9A-Za-z.:|/><~&-]
 star [*]
 QUOTE ["]
 NOTQUOTE [^"]
