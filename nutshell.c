@@ -465,12 +465,14 @@ void process_command() {
     else if (!strcmp(*arr[0].name, "bye")) {
         exit(1);
     } 
-       
+    else {
+        doit();
+    }
     if (!strcmp(*arr[counter - 1].name, "&")) {
         counter--;
         background = true;
     }
-    doit();
+
     
 
 }
