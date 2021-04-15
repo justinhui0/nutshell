@@ -395,7 +395,7 @@ void process_command() {
         if (strcmp(*arr[2].name, "") != 0)
         {
             if (!strcmp(*arr[1].name, "PATH")) {
-                char* path = getenv("PATH");
+                char* path = malloc(1000);
                 char** newPaths = str_split(*arr[2].name, ':');
 
                 for (int i = 0; *(newPaths + i); i++) { 
@@ -408,9 +408,10 @@ void process_command() {
                         strcat(expandedPath, choppedStr);
                         strcpy(*(newPaths + i), expandedPath); // replace tilde string with full string
                     }
-                    strcat(path, ":");
                     strcat(path, *(newPaths + i));
+                    strcat(path, ":");
                 }
+                path[strlen(path) - 1] = '\0';
                 setenv("PATH", path, 1);
             }
             else if(setenv(*arr[1].name,*arr[2].name, 1) == -1) {
